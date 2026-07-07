@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ===================================================================
+ * 設計代幣（shadcn/ui 相容）— 以原始「強震模擬器」深色配色為基礎
+ * =================================================================== */
+:root {
+  --radius: 0.5rem;
+
+  --background: #f4f6f9;
+  --foreground: #1a2029;
+  --card: #ffffff;
+  --card-foreground: #1a2029;
+  --popover: #ffffff;
+  --popover-foreground: #1a2029;
+  --primary: #2b6cb0;
+  --primary-foreground: #f7fafc;
+  --secondary: #e5e9ef;
+  --secondary-foreground: #1a2029;
+  --muted: #e5e9ef;
+  --muted-foreground: #5a6675;
+  --accent: #e5e9ef;
+  --accent-foreground: #1a2029;
+  --destructive: #e0492f;
+  --destructive-foreground: #fff5f3;
+  --border: #d3dae2;
+  --input: #cbd3dd;
+  --ring: #2b6cb0;
+
+  /* 波形/分量的專用色（加速度/速度/變位、NS/EW/UD） */
+  --acc: #ff5c49;
+  --vel: #2dd4bf;
+  --dsp: #f5b942;
+  --ns: #5aa2ff;
+  --ew: #3ddc97;
+  --ud: #aab4c4;
+}
+
+.dark {
+  --background: #0e1116;
+  --foreground: #d7dee8;
+  --card: #161c25;
+  --card-foreground: #d7dee8;
+  --popover: #161c25;
+  --popover-foreground: #d7dee8;
+  --primary: #4f86c6;
+  --primary-foreground: #0b0f14;
+  --secondary: #1d2530;
+  --secondary-foreground: #d7dee8;
+  --muted: #1d2530;
+  --muted-foreground: #8593a5;
+  --accent: #253040;
+  --accent-foreground: #e6edf5;
+  --destructive: #ff5c49;
+  --destructive-foreground: #10151c;
+  --border: #2a3442;
+  --input: #313d4d;
+  --ring: #4f86c6;
+
+  --acc: #ff5c49;
+  --vel: #2dd4bf;
+  --dsp: #f5b942;
+  --ns: #5aa2ff;
+  --ew: #3ddc97;
+  --ud: #aab4c4;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-acc: var(--acc);
+  --color-vel: var(--vel);
+  --color-dsp: var(--dsp);
+  --color-ns: var(--ns);
+  --color-ew: var(--ew);
+  --color-ud: var(--ud);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Consolas, monospace;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family:
+      "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+    font-size: 13px;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
