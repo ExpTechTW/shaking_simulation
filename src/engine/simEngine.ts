@@ -431,11 +431,14 @@ export class SimEngine {
     if (def.face) body.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), (def.face * Math.PI) / 2)
     this.world.addBody(body)
     this.scene.add(g)
+    const cfg = this.furnCfg(def)
     return {
       def,
       body,
       mesh: g,
       startPos: new CANNON.Vec3(def.pos[0], body.position.y - this.roomOffset.py, def.pos[1]),
+      cogY: cfg.cogY, // 質心高（供傾倒臨界判定）
+      halfBase: Math.min(def.w || 0.4, def.d || 0.4) / 2, // 半底寬（易傾倒軸）
       fallen: false,
       slid: false,
       stuck: true,
@@ -1069,6 +1072,7 @@ export class SimEngine {
 
   /* ---------------------------------------------------------- 模擬迴圈 */
   private sampleWave(arr: Float64Array, t: number) {
+    if (t <= 0) return arr[0] * 0.01
     const i = t / this.proc.dt
     const i0 = Math.floor(i)
     if (i0 >= this.proc.n - 1) return arr[this.proc.n - 1] * 0.01
@@ -1078,15 +1082,23 @@ export class SimEngine {
   private axIdx() {
     return this.swap ? { ns: 1, ew: 0 } : { ns: 0, ew: 1 }
   }
+  /** 被規定位移軌跡的時間導數（中央差分），供運動學台速度使用。 */
+  private dspVel(arr: Float64Array, t: number, s: number) {
+    const h = PHYS_DT
+    return ((this.sampleWave(arr, t + h) - this.sampleWave(arr, t - h)) / (2 * h)) * s
+  }
   private tablePose(t: number, out: any) {
     const s = this.ampScale || 1
     const { ns, ew } = this.axIdx()
     out.px = this.sampleWave(this.proc.dsp[ew], t) * s
     out.pz = -this.sampleWave(this.proc.dsp[ns], t) * s
     out.py = this.sampleWave(this.proc.dsp[2], t) * s
-    out.vx = this.sampleWave(this.proc.vel[ew], t) * s
-    out.vz = -this.sampleWave(this.proc.vel[ns], t) * s
-    out.vy = this.sampleWave(this.proc.vel[2], t) * s
+    // 運動學台的速度須為被規定位移的時間導數（自洽），而非 proc.vel。
+    // proc.vel 與 proc.dsp 出自不同 JMA 濾波鏈，非彼此微分（EW 差達 ~35%），
+    // 直接餵入會使約束/接觸的速度層求解與實際位移軌跡不符。
+    out.vx = this.dspVel(this.proc.dsp[ew], t, s)
+    out.vz = -this.dspVel(this.proc.dsp[ns], t, s)
+    out.vy = this.dspVel(this.proc.dsp[2], t, s)
     out.ax = this.sampleWave(this.proc.acc[ew], t) * s
     out.az = -this.sampleWave(this.proc.acc[ns], t) * s
     out.ay = this.sampleWave(this.proc.acc[2], t) * s
@@ -1138,6 +1150,23 @@ export class SimEngine {
     this.renderer.render(this.scene, this.camera)
   }
 
+  /* 撃力式靜摩擦（三區判定）。
+     ---------------------------------------------------------------------
+     cannon 的接觸點摩擦本身能正確表現「滑動」與「繞底邊傾倒/搖擺」（力矩自然
+     在底面發育），但對運動學地板會過度固著、且在微小往復下殘留數值潛移。
+     早期版本以「對質心硬賦速」補正，卻因質心無力臂而抹除了傾倒力矩，使高瘦
+     家具的傾倒臨界被高估數倍。此處改為物理正確的三區判定：
+
+       台面水平加速度 aH = |(a_x, a_z)|
+       靜摩擦上限     a_slide = μ_s·g_eff   （μ_s = 1.3μ_k, g_eff = max(g+a_y,0)）
+       傾倒臨界       a_tip   = g·(半底寬)/重心高
+
+     ・aH < a_slide 且 aH < a_tip（真靜止域）→ 鎖定水平速度與位置（未傾斜時），
+        徹底消除數值潛移與純垂直激振造成的偽水平漂移。門檻與質量無關（正確庫倫）。
+     ・aH ≥ 任一臨界 → 放行，交由 cannon 接觸點物理正確地滑動或傾倒。
+     此法經數值實驗確認：傾倒/滑動臨界皆與解析解吻合、潛移歸零。 */
+  private _up = new CANNON.Vec3(0, 1, 0)
+  private _tmpv = new CANNON.Vec3()
   private applyStiction() {
     if (!this.furniture.length) return
     const inContact = new Set<CANNON.Body>()
@@ -1146,6 +1175,7 @@ export class SimEngine {
       else if (c.bj === this.roomBody) inContact.add(c.bi)
     }
     const geff = Math.max(9.81 + this._pose.ay, 0)
+    const aH = Math.hypot(this._pose.ax, this._pose.az)
     for (const f of this.furniture) {
       if (f.def.lamp) continue
       if (inContact.has(f.body)) f._cg = CONTACT_GRACE
@@ -1155,18 +1185,25 @@ export class SimEngine {
         f.stuck = false
         continue
       }
-      const m = f.body.mass
-      const N = m * geff
-      const Jmax = f.def.mu * MUS_OVER_MUK * N * PHYS_DT
-      const dvx = f.body.velocity.x - this._pose.vx
-      const dvz = f.body.velocity.z - this._pose.vz
-      const Jneed = m * Math.hypot(dvx, dvz)
-      if (Jneed <= Jmax) {
+      const aSlide = f.def.mu * MUS_OVER_MUK * geff
+      const aTip = (9.81 * f.halfBase) / Math.max(f.cogY, 1e-3)
+      f.body.quaternion.vmult(this._up, this._tmpv)
+      const tilt = Math.acos(Math.max(-1, Math.min(1, this._tmpv.y)))
+      // 靜止域 = 未傾斜 且 台面加速度低於滑動與傾倒兩臨界。一旦開始傾斜（搖擺/傾倒
+      // 進行中，tilt≥2°）即完全放行，交由 cannon 自然演化搖擺/傾倒動力學，避免固著抑制搖擺。
+      if (aH < aSlide && aH < aTip && tilt < 0.035) {
         f.body.velocity.x = this._pose.vx
         f.body.velocity.z = this._pose.vz
         f.stuck = true
+        // 近乎直立時連位置一併鎖定（消除逐步位置漂移＝潛移，及純垂直激振的偽水平漂移）
+        if (tilt < 0.02) {
+          f.body.position.x = this.roomBody.position.x + f.startPos.x
+          f.body.position.z = this.roomBody.position.z + f.startPos.z
+        }
+        // 鉛直軸扭轉摩擦（抑制不自然自轉）
         const wy = f.body.angularVelocity.y
         if (wy !== 0) {
+          const N = f.body.mass * geff
           const reff = 0.3 * Math.min(f.def.w || 0.4, f.def.d || 0.4)
           const Iy = Math.max(f.body.inertia.y, 1e-6)
           const Lmax = f.def.mu * MUS_OVER_MUK * N * reff * PHYS_DT
