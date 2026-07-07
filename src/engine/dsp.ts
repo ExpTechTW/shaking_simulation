@@ -1,9 +1,9 @@
 /* =====================================================================
  * 訊號處理（DSP）與建物應答分析
  * ---------------------------------------------------------------------
- * - Butterworth 高通濾波器（依 齋藤1978 遞迴濾波器設計）＋ 梯形積分
- *   fp=0.1Hz, fstop=0.05Hz, Ap=0.1dB, As=10dB
- *   加速度→(HPF)→速度→(HPF)→變位→(HPF) 之多段處理以抑制基線飄移。
+ * - 加速度積分為速度/變位：採氣象廳（JMA）官方積分漸化式（齋藤1978 係數設計）。
+ *   速度＝截止5秒3次Butterworth積分特性；變位＝1倍強震計特性(T0=6s, h=0.55)。
+ *   漸化式係數為 100Hz 設計，非 100Hz 之記錄先線性重取樣至 100Hz。
  * - 建物應答：多質點剪力型模型之時刻歷應答（Newmark-β 法、Rayleigh 阻尼）。
  * ===================================================================== */
 
@@ -26,69 +26,6 @@ interface AccRecord {
   acc: Float64Array[]
   n: number
   fmt: string
-}
-
-interface Section {
-  b: [number, number, number]
-  a: [number, number]
-}
-
-/** 設計 Butterworth 高通濾波器（回傳二階節）。 */
-function designHpf(fsamp: number): Section[] {
-  const Ap = 0.1
-  const As = 10.0
-  const fp = 0.1
-  const fstop = 0.05
-  const wp = Math.tan((Math.PI * fp) / fsamp)
-  const ws = Math.tan((Math.PI * fstop) / fsamp)
-  const n = Math.ceil(
-    Math.log10((Math.pow(10, As / 10) - 1) / (Math.pow(10, Ap / 10) - 1)) / (2 * Math.log10(wp / ws)),
-  )
-  const eps = Math.sqrt(Math.pow(10, Ap / 10) - 1)
-  const wc = wp * Math.pow(eps, 1 / n)
-  const secs: Section[] = []
-  for (let k = 0; k < Math.floor(n / 2); k++) {
-    const a1 = 2 * Math.sin(((2 * k + 1) * Math.PI) / (2 * n))
-    const A = 1 + a1 * wc + wc * wc
-    const B = 2 * (wc * wc - 1)
-    const C = 1 - a1 * wc + wc * wc
-    secs.push({ b: [1 / A, -2 / A, 1 / A], a: [B / A, C / A] })
-  }
-  if (n % 2) {
-    const A = 1 + wc
-    secs.push({ b: [1 / A, -1 / A, 0], a: [(wc - 1) / A, 0] })
-  }
-  return secs
-}
-
-function applyFilter(x: Float64Array, secs: Section[]): Float64Array {
-  let y = Float64Array.from(x)
-  for (const s of secs) {
-    const out = new Float64Array(y.length)
-    let x1 = 0
-    let x2 = 0
-    let y1 = 0
-    let y2 = 0
-    const [b0, b1, b2] = s.b
-    const [a1, a2] = s.a
-    for (let i = 0; i < y.length; i++) {
-      const xi = y[i]
-      const yi = b0 * xi + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2
-      x2 = x1
-      x1 = xi
-      y2 = y1
-      y1 = yi
-      out[i] = yi
-    }
-    y = out
-  }
-  return y
-}
-
-function cumTrapz(x: Float64Array, dt: number): Float64Array {
-  const y = new Float64Array(x.length)
-  for (let i = 1; i < x.length; i++) y[i] = y[i - 1] + (x[i] + x[i - 1]) * 0.5 * dt
-  return y
 }
 
 /* 氣象廳 積分漸化式（齋藤1978 之係數設計，設計取樣 100Hz）

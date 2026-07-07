@@ -47,12 +47,11 @@ interface RawRecord {
   samples: Int32Array | Float64Array
 }
 
-/* ---- 位元擷取（高→低，含號延伸）---- */
+/* ---- 位元擷取（含號延伸）----
+   以 32 位算術移位做號延伸，對所有位寬（含 31/32）皆正確：
+   先左移使目標最高位 hi 落到位元 31（符號位），再算術右移取回。 */
 function signBits(word: number, hi: number, lo: number): number {
-  const width = hi - lo + 1
-  const v = (word >>> lo) & ((width === 32 ? 0xffffffff : (1 << width) - 1) >>> 0)
-  const sign = 1 << (width - 1)
-  return v & sign ? v - (1 << width) : v
+  return (word << (31 - hi)) >> (31 - hi + lo)
 }
 
 /* ---- Steim-1 單字解碼 ---- */

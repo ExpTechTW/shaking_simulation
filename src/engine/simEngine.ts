@@ -416,7 +416,9 @@ export class SimEngine {
     const mat = this.furnPhysMat(def)
     const body = new CANNON.Body({ mass: mass ?? def.mass, material: mat })
     body.position.set(def.pos[0] + this.roomOffset.px, centerY + (def.y0 || 0) + 0.002 + this.roomOffset.py, def.pos[1] + this.roomOffset.pz)
-    if (def.face) body.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), (def.face * Math.PI) / 2)
+    // 注意：face 旋轉須在所有 addShape 之後才設定（見 finishFurn）。
+    // cannon-es 的 updateMassProperties 由世界座標 AABB 推算慣量，若在加入 shape
+    // 前先旋轉，90°/270° 會使 w≠d 家具的水平主慣量 Ixx↔Izz 對調而錯誤。
     body.velocity.set(this.roomOffset.vx, this.roomOffset.vy, this.roomOffset.vz)
     body.linearDamping = 0.01
     body.angularDamping = 0.01
@@ -424,6 +426,9 @@ export class SimEngine {
     return body
   }
   private finishFurn(def: any, body: CANNON.Body, g: THREE.Group) {
+    // 所有 shape 已加入 → 此時才設 face 旋轉，確保 body 本體慣量以未旋轉幾何計算
+    // （正確），再由 cannon 每步 updateInertiaWorld 轉入世界座標。
+    if (def.face) body.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), (def.face * Math.PI) / 2)
     this.world.addBody(body)
     this.scene.add(g)
     return {
