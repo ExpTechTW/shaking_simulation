@@ -236,6 +236,7 @@ body.panel-hidden #orbitPanel{left:12px}
     <span><i style="background:var(--ns)"></i>NS</span>
     <span><i style="background:var(--ew)"></i>EW</span>
     <span><i style="background:var(--ud)"></i>UD</span>
+    <button id="waveViewBtn" style="margin-left:auto;padding:1px 8px;font-size:10px">全体</button>
   </div>
   <div class="chart"><div class="hd"><span style="color:var(--acc)">加速度 (gal)</span><span class="mono" id="pkA"></span></div><canvas id="cA"></canvas></div>
   <div class="chart"><div class="hd"><span style="color:var(--vel)">速度 (cm/s)</span><span class="mono" id="pkV"></span></div><canvas id="cV"></canvas></div>
@@ -543,12 +544,20 @@ function buildingResponse(pg,cfg){
  * ===================================================================== */
 const FURN_HOME = [
  {id:"bookshelf", name:"本棚（背高）",  kind:"box", w:0.90,d:0.30,h:1.80, mass:70, mu:0.30, color:0x8a5a33, pos:[-1.5,-1.55], face:0, on:true},
- {id:"chest",     name:"衣装棚（背低）", kind:"box", w:0.90,d:0.45,h:0.90, mass:45, mu:0.35, color:0xa9825a, pos:[-0.2,-1.50], face:0},
- {id:"desk",      name:"机",           kind:"desk", w:1.20,d:0.70,h:0.72, mass:25, mu:0.45, color:0x9c8a6e, pos:[1.2,-1.55], face:0},
- {id:"chair",     name:"椅子",         kind:"chair", w:0.42,d:0.42,h:0.82, seatH:0.44, mass:5, mu:0.40, color:0x5a6b7d, pos:[1.2,-0.7], face:0},
+ {id:"chest",     name:"衣装棚（背低）", kind:"box", w:0.90,d:0.45,h:0.90, mass:45, mu:0.35, color:0xa9825a, on:true, pos:[-0.2,-1.50], face:0},
+ {id:"desk",      name:"机",           kind:"desk", w:1.20,d:0.70,h:0.72, mass:25, mu:0.45, color:0x9c8a6e, on:true, pos:[1.2,-1.55], face:0, on:true},
+ {id:"chair",     name:"椅子",         kind:"chair", w:0.42,d:0.42,h:0.82, seatH:0.44, mass:5, mu:0.40, color:0x5a6b7d, on:true, pos:[1.2,-0.7], face:0, on:true},
  {id:"bed",       name:"ベッド",       kind:"bed", w:1.95,d:0.97,h:0.45, headH:0.85, mass:35, mu:0.40, color:0x6e4f33, pos:[1.35,0.9], face:1, on:true},
  {id:"fridge",    name:"冷蔵庫",       kind:"box", w:0.65,d:0.70,h:1.80, mass:90, mu:0.25, color:0xc4ccd4, pos:[-1.55,0.9], face:0, on:true},
  {id:"lamp",      name:"吊り照明（天井から）", kind:"lamp", lamp:true, mass:1.5, cord:1.2, color:0xf5e3a0, pos:[0.3,0.1], on:true},
+ {id:"shelftop",  name:"本棚上の花瓶",   kind:"box", w:0.12,d:0.12,h:0.24, mass:1.2, mu:0.35, color:0x7a9aa8, on:true,
+  units:[{pos:[-1.65,-1.55],y0:1.80}]},
+ {id:"deskbooks", name:"机上の本", kind:"box", w:0.22,d:0.16,h:0.05, mass:0.8, mu:0.45, color:0x8a3b2e, on:true,
+  units:[{pos:[1.45,-1.60],y0:0.72},{pos:[1.44,-1.61],face:0,y0:0.775}]},
+ {id:"clock", name:"目覚まし時計", kind:"box", w:0.11,d:0.06,h:0.13, mass:0.4, mu:0.45, color:0xc4553a, on:true,
+  units:[{pos:[0.95,-1.55],y0:0.72}]},
+ {id:"chesttop",  name:"箪笥上の写真立て", kind:"box", w:0.16,d:0.04,h:0.20, mass:0.5, mu:0.40, color:0x5a4a38, on:true,
+  units:[{pos:[-0.2,-1.55],y0:0.90}]},
 ];
 
 /* オフィス：室 6.4×5.2m。島型対面デスク・袖机・キャスター椅子・
@@ -577,6 +586,15 @@ const FURN_OFFICE = [
   units:[{pos:[0.2,-0.15],face:1},{pos:[0.2,1.05],face:1}]},
  {id:"copier", name:"複合機（キャスター付）", kind:"copier", w:0.62,d:0.68,h:1.10, mass:110, mu:0.05, color:0xe3e6ea, on:true,
   units:[{pos:[-2.6,1.9],face:1}]},
+ {id:"keybd", name:"キーボード（机上）", kind:"box", w:0.36,d:0.14,h:0.025, mass:0.8, mu:0.40, color:0x22272e, on:true,
+  units:[{pos:[-1.5,-0.55],face:0,y0:0.70},{pos:[-1.5,0.55],face:0,y0:0.70},
+         {pos:[1.3,-1.66],face:0,y0:0.70},{pos:[2.12,1.4],face:1,y0:0.72}]},
+ {id:"mug", name:"マグカップ（机上）", kind:"box", w:0.08,d:0.08,h:0.095, mass:0.35, mu:0.35, color:0xc4553a, on:true,
+  units:[{pos:[-1.1,-0.6],y0:0.70},{pos:[-1.9,0.6],y0:0.70}]},
+ {id:"phone", name:"電話機（机上）", kind:"box", w:0.20,d:0.22,h:0.07, mass:1.0, mu:0.45, color:0x30363e, on:true,
+  units:[{pos:[2.35,1.9],face:1,y0:0.72}]},
+ {id:"docs", name:"書類の山", kind:"box", w:0.30,d:0.22,h:0.06, mass:1.5, mu:0.35, color:0xdfe3e8, on:true,
+  units:[{pos:[-2.4,-2.3],y0:1.85},{pos:[0.95,-1.95],y0:0.70}]},
 ];
 
 const SCENES={
@@ -662,8 +680,8 @@ function initPhysics(){
   world.gravity.set(0,-9.81,0);
   world.broadphase=new CANNON.SAPBroadphase(world);
   world.solver.iterations=40;
-  world.defaultContactMaterial.contactEquationStiffness=1e8;
-  world.defaultContactMaterial.contactEquationRelaxation=3;
+  world.defaultContactMaterial.contactEquationStiffness=2e7; // 軟化: 貫通補正の撃力スパイク低減
+  world.defaultContactMaterial.contactEquationRelaxation=4;
   world.defaultContactMaterial.frictionEquationStiffness=1e8;
   buildRoom();
 }
@@ -687,6 +705,9 @@ function buildRoom(){
                     new CANNON.Vec3(-ROOM_W/2-WALL_T/2,wh,0));
   roomBody.addShape(new CANNON.Box(new CANNON.Vec3(WALL_T/2,wh,ROOM_D/2)),
                     new CANNON.Vec3( ROOM_W/2+WALL_T/2,wh,0));
+  // 剛体天井（吊り具はこれに衝突して止まる。天井越えの一回転を物理的に防止）
+  roomBody.addShape(new CANNON.Box(new CANNON.Vec3(ROOM_W/2,0.06,ROOM_D/2)),
+                    new CANNON.Vec3(0,ROOM_H+0.06,0));
   world.addBody(roomBody);
 
   roomGroup=new THREE.Group(); scene.add(roomGroup);
@@ -741,7 +762,7 @@ function furnPhysMat(def){
   if(!_matCache[key]){
     const m=new CANNON.Material(key);
     world.addContactMaterial(new CANNON.ContactMaterial(floorMat,m,
-      {friction:def.mu,restitution:0.0,frictionEquationStiffness:1e8,frictionEquationRelaxation:3}));
+      {friction:def.mu,restitution:0.0,frictionEquationStiffness:1e8,frictionEquationRelaxation:3,contactEquationStiffness:2e7,contactEquationRelaxation:4}));
     _matCache[key]=m;
   }
   return _matCache[key];
@@ -776,7 +797,108 @@ function makeBoxFurn(def){
   body.addShape(new CANNON.Box(new CANNON.Vec3(def.w/2,def.h/2,def.d/2)),
                 new CANNON.Vec3(0,def.h/2-cY,0));
   const g=new THREE.Group();
-  if(def.id==="bookshelf"){ // オープン本棚：枠＋背板＋棚板＋書籍
+  if(def.id==="shelftop"){ // 花瓶＋草花
+    const prof=[[0.045,0],[0.055,0.03],[0.05,0.09],[0.026,0.15],[0.03,0.19],[0.036,0.21]];
+    for(let i=0;i<prof.length-1;i++){
+      const seg=new THREE.Mesh(new THREE.CylinderGeometry(prof[i+1][0],prof[i][0],prof[i+1][1]-prof[i][1],14),
+        stdMat(def.color,0.35));
+      seg.position.y=(prof[i][1]+prof[i+1][1])/2-cY;seg.castShadow=true;g.add(seg);
+    }
+    for(let k=0;k<3;k++){
+      const a=k*2.1, st=new THREE.Mesh(new THREE.CylinderGeometry(0.003,0.003,0.14,5),stdMat(0x4a7a3a,0.8));
+      st.position.set(Math.cos(a)*0.012,0.26-cY,Math.sin(a)*0.012);
+      st.rotation.z=Math.cos(a)*0.25;st.rotation.x=Math.sin(a)*0.25;g.add(st);
+      const fl=new THREE.Mesh(new THREE.SphereGeometry(0.014,8,6),stdMat([0xd46a8a,0xe0c050,0xc0d0e8][k],0.9));
+      fl.position.set(Math.cos(a)*0.03,0.33-cY,Math.sin(a)*0.03);g.add(fl);
+    }
+  }else if(def.id==="deskbooks"){ // 単行本：表紙＋小口
+    const cov=new THREE.Mesh(new THREE.BoxGeometry(def.w,def.h,def.d),stdMat(def.color,0.75));
+    cov.position.y=def.h/2-cY;g.add(edged(cov));
+    const pg=new THREE.Mesh(new THREE.BoxGeometry(def.w*0.96,def.h*0.8,def.d*1.01),stdMat(0xf2eee2,0.95));
+    pg.position.set(def.w*0.03,def.h/2-cY,0);g.add(pg);
+    const sp=new THREE.Mesh(new THREE.BoxGeometry(0.012,def.h*1.01,def.d*1.01),stdMat(def.color,0.7));
+    sp.position.set(-def.w/2+0.006,def.h/2-cY,0);g.add(sp);
+  }else if(def.id==="clock"){ // 目覚まし時計：胴＋文字盤＋ベル＋脚
+    const bodyR=def.h*0.42;
+    const dr=new THREE.Mesh(new THREE.CylinderGeometry(bodyR,bodyR,def.d*0.8,20),stdMat(def.color,0.5));
+    dr.rotation.x=Math.PI/2;dr.position.y=bodyR+0.02-cY;dr.castShadow=true;g.add(dr);
+    const face=new THREE.Mesh(new THREE.CylinderGeometry(bodyR*0.82,bodyR*0.82,0.004,20),stdMat(0xf5f2e8,0.9));
+    face.rotation.x=Math.PI/2;face.position.set(0,bodyR+0.02-cY,def.d*0.4);g.add(face);
+    const hh=new THREE.Mesh(new THREE.BoxGeometry(0.004,bodyR*0.5,0.003),stdMat(0x22262c,0.4));
+    hh.position.set(0,bodyR+0.02+bodyR*0.12-cY,def.d*0.4+0.004);hh.rotation.z=-0.9;g.add(hh);
+    const mh=new THREE.Mesh(new THREE.BoxGeometry(0.003,bodyR*0.68,0.003),stdMat(0x22262c,0.4));
+    mh.position.set(0,bodyR+0.02+bodyR*0.16-cY,def.d*0.4+0.004);mh.rotation.z=0.5;g.add(mh);
+    for(const sx of[-1,1]){
+      const bell=new THREE.Mesh(new THREE.SphereGeometry(0.018,10,8,0,Math.PI*2,0,Math.PI/2),stdMat(0xd8b040,0.4));
+      bell.position.set(sx*bodyR*0.55,bodyR*2+0.028-cY,0);g.add(bell);
+      const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.004,0.006,0.024,6),stdMat(0x30363e,0.4));
+      leg.position.set(sx*bodyR*0.6,0.012-cY,def.d*0.15);leg.rotation.z=-sx*0.3;g.add(leg);
+    }
+  }else if(def.id==="chesttop"){ // 写真立て：枠＋写真＋背面支え
+    const fw=def.w,fh=def.h,ft=0.012;
+    const frame=new THREE.Mesh(new THREE.BoxGeometry(fw,fh,ft),stdMat(def.color,0.6));
+    frame.position.set(0,fh/2-cY,0);frame.rotation.x=-0.14;g.add(edged(frame));
+    const photo=new THREE.Mesh(new THREE.PlaneGeometry(fw*0.8,fh*0.8),
+      new THREE.MeshStandardMaterial({color:0x88a8c0,roughness:0.6}));
+    photo.position.set(0,fh/2-cY+0.001,ft/2+0.001);photo.rotation.x=-0.14;g.add(photo);
+    const stand=new THREE.Mesh(new THREE.BoxGeometry(fw*0.3,fh*0.75,0.008),stdMat(def.color,0.6));
+    stand.position.set(0,fh*0.36-cY,-0.035);stand.rotation.x=0.5;g.add(stand);
+  }else if(def.id==="keybd"){ // キーボード：傾斜ベース＋キー列
+    const base=new THREE.Mesh(new THREE.BoxGeometry(def.w,def.h,def.d),stdMat(def.color,0.6));
+    base.position.y=def.h/2-cY;base.rotation.x=-0.05;g.add(edged(base));
+    const rows=4,keyH=0.006;
+    for(let r=0;r<rows;r++){
+      const rw=def.w*(r===rows-1?0.55:0.94);
+      const row=new THREE.Mesh(new THREE.BoxGeometry(rw,keyH,def.d*0.16),stdMat(0x3a424c,0.5));
+      const z=-def.d*0.36+r*def.d*0.24;
+      row.position.set(r===rows-1?-def.w*0.05:0,def.h+keyH/2-cY-z*0.05,z);
+      row.rotation.x=-0.05;g.add(row);
+      if(r<rows-1)for(let k=1;k<10;k++){ // キー間の溝
+        const gp=new THREE.Mesh(new THREE.BoxGeometry(0.002,keyH*1.05,def.d*0.16),stdMat(0x22272e,0.6));
+        gp.position.set(-rw/2+rw*k/10,def.h+keyH/2-cY-z*0.05,z);gp.rotation.x=-0.05;g.add(gp);
+      }
+    }
+  }else if(def.id==="mug"){ // マグ：円筒＋内側＋取っ手
+    const R=def.w/2;
+    const cup=new THREE.Mesh(new THREE.CylinderGeometry(R,R*0.92,def.h,16,1,true),
+      new THREE.MeshStandardMaterial({color:def.color,roughness:0.5,side:THREE.DoubleSide}));
+    cup.position.y=def.h/2-cY;cup.castShadow=true;g.add(cup);
+    const bot=new THREE.Mesh(new THREE.CylinderGeometry(R*0.92,R*0.92,0.006,16),stdMat(def.color,0.5));
+    bot.position.y=0.003-cY;g.add(bot);
+    const cof=new THREE.Mesh(new THREE.CylinderGeometry(R*0.9,R*0.9,0.004,16),stdMat(0x3a2a1c,0.7));
+    cof.position.y=def.h*0.82-cY;g.add(cof);
+    const hdl=new THREE.Mesh(new THREE.TorusGeometry(0.026,0.007,8,14,Math.PI*1.4),stdMat(def.color,0.5));
+    hdl.position.set(R+0.012,def.h*0.52-cY,0);hdl.rotation.z=Math.PI/2+0.9;g.add(hdl);
+  }else if(def.id==="phone"){ // ビジネスフォン：楔形本体＋受話器＋ボタン
+    const bodyM=new THREE.Mesh(new THREE.BoxGeometry(def.w,def.h*0.7,def.d),stdMat(def.color,0.55));
+    bodyM.position.y=def.h*0.35-cY;bodyM.rotation.x=-0.18;g.add(edged(bodyM));
+    const hs=new THREE.Group();
+    const hb=new THREE.Mesh(new THREE.BoxGeometry(0.045,0.022,def.d*0.9),stdMat(0x22262c,0.5));hs.add(hb);
+    for(const sz of[-1,1]){
+      const ear=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.03,0.05),stdMat(0x22262c,0.5));
+      ear.position.set(0,-0.006,sz*def.d*0.38);hs.add(ear);
+    }
+    hs.position.set(-def.w*0.28,def.h*0.72-cY,0);hs.rotation.x=-0.18;g.add(hs);
+    for(let r=0;r<3;r++)for(let c2=0;c2<3;c2++){
+      const btn=new THREE.Mesh(new THREE.BoxGeometry(0.016,0.005,0.014),stdMat(0xb8bec6,0.5));
+      btn.position.set(def.w*0.16+(c2-1)*0.024,def.h*0.56-cY+(1-r)*0.006,(r-1)*0.03);
+      btn.rotation.x=-0.18;g.add(btn);
+    }
+  }else if(def.id==="docs"){ // 書類の山：ずれた紙束＋クリップ
+    const nly=5;
+    let rng=7;
+    for(let i=0;i<nly;i++){
+      rng=(rng*48271)%2147483647;
+      const ox=((rng%100)/100-0.5)*0.02;
+      rng=(rng*48271)%2147483647;
+      const oz=((rng%100)/100-0.5)*0.02, rot=((rng%100)/100-0.5)*0.12;
+      const sh=new THREE.Mesh(new THREE.BoxGeometry(def.w*0.96,def.h/nly*0.9,def.d*0.96),
+        stdMat(i%2?0xf0f2f4:0xe6e9ee,0.95));
+      sh.position.set(ox,def.h*(i+0.5)/nly-cY,oz);sh.rotation.y=rot;g.add(sh);
+    }
+    const clip=new THREE.Mesh(new THREE.BoxGeometry(0.05,def.h*0.5,0.012),stdMat(0x2a2f36,0.4));
+    clip.position.set(0,def.h*0.75-cY,def.d/2-0.006);g.add(clip);
+  }else if(def.id==="bookshelf"){ // オープン本棚：枠＋背板＋棚板＋書籍
     const t=0.022, iw=def.w-2*t;
     const back=new THREE.Mesh(new THREE.BoxGeometry(def.w,def.h,0.012),stdMat(0x6d4426));
     back.position.set(0,def.h/2-cY,-def.d/2+0.006);g.add(back);
@@ -1219,7 +1341,6 @@ function loop(ts){
       roomBody.velocity.set(_pose.vx,_pose.vy,_pose.vz);
       world.step(PHYS_DT);
       applyStiction();
-      limitLampSwing();
     }
     roomGroup.position.set(_pose.px,_pose.py,_pose.pz);
     document.getElementById("timeRead").textContent=simT.toFixed(1)+" s";
@@ -1270,35 +1391,24 @@ function loop(ts){
    低い基準まで収まらないと再固着しないようにすることで、大きく滑って停止した
    直後に残る微小な残留速度・回転ノイズが単一閾値を跨ぎ続けて生じる
    一方向クリープの再発を防ぐ（摩擦係数・積分手法など計算そのものは変更しない）。 */
-const SLIP_BREAK=0.08, SLIP_LOCK=0.03;   // 相対滑り速度：離脱／再固着のしきい値(m/s)
-const SPIN_BREAK=0.35, SPIN_LOCK=0.15;   // 角速度：離脱／再固着のしきい値(rad/s)
-const MUS_OVER_MUK=1.3; // 静止摩擦係数/動摩擦係数の代表的な比（木材・畳・カーペット等）
-/* 吊り具（吊り照明・LED蛍光灯）の振れ角リミッタ。
-   PointToPointConstraintは剛リンクのため大振幅時に天井を越えて一回転できてしまう。
-   実際の紐吊りでは~70°を超える振れは生じにくいので、超過時に部屋相対速度と
-   角速度を強く減衰させて巻き上がりを防ぐ（通常の振れには影響しない）。 */
-const LAMP_MAX_SWING=70*Math.PI/180;
-function limitLampSwing(){
-  for(const f of furniture){
-    if(!f.cords)continue;
-    let ax=0,ay=0,az=0;
-    for(const c of f.cords){ax+=c.anchorLocal.x;ay+=c.anchorLocal.y;az+=c.anchorLocal.z;}
-    const m=f.cords.length;
-    ax=ax/m+roomBody.position.x; ay=ay/m+roomBody.position.y; az=az/m+roomBody.position.z;
-    const rx=f.body.position.x-ax, ry=f.body.position.y-ay, rz=f.body.position.z-az;
-    const phi=Math.atan2(Math.hypot(rx,rz),-ry); // 鉛直下向きからの振れ角（>90°で上方）
-    if(phi>LAMP_MAX_SWING){
-      const ex=Math.min(1,(phi-LAMP_MAX_SWING)/(20*Math.PI/180));
-      const fac=1-0.35*ex; // 超過量に応じ強く減衰
-      const v=f.body.velocity, rv=roomBody.velocity;
-      v.x=rv.x+(v.x-rv.x)*fac;
-      v.y=rv.y+(v.y-rv.y)*fac;
-      v.z=rv.z+(v.z-rv.z)*fac;
-      f.body.angularVelocity.scale(fac,f.body.angularVelocity);
-    }
-  }
-}
-
+/* ---- 床摩擦の補助モデル（上限付きクーロン摩擦撃力） ----
+   cannon.jsの反復ソルバーは静止摩擦の「完全な固着」を表現できず、加振中に
+   家具が微小滑り（クリープ）する。そこで床接触中の剛体に対し、クーロン摩擦の
+   物理限界を超えない範囲の摩擦撃力を毎サブステップ与える：
+     必要撃力 J_need = m·|v_body − v_table|（水平面内）
+     静止摩擦の上限 J_max = μs·N·Δt, μs=1.3μk, N = m·max(0, g + a_y,table)
+   ・J_need ≤ J_max → J_need を全量適用（＝台と同速に達する。これは静止摩擦が
+     実際に行うことであり、上限内なので力学的に正当な外力）
+   ・J_need >  J_max → 何もしない（動摩擦はcannonの摩擦方程式 μk=def.mu に委ねる）
+   速度の無条件上書きや角速度の人為的スケーリングは行わない。
+   鉛直軸まわりの回転滑りには、接触面のねじり摩擦を同じ上限方式で適用：
+     L_max = μs·N·r_eff·Δt（r_eff＝接触面の有効半径 ≈ 0.3·min(w,d)）
+   貫通補正に伴う微小ジャンプで接触が1〜2ステップ途切れても摩擦が消えない
+   よう、接触判定に数ステップのグレース窓を設ける。ただし垂直相対速度が
+   大きい間（実際に跳ねている間）は空中とみなし適用しない。 */
+const MUS_OVER_MUK=1.3;     // 静止/動摩擦係数比（木材・畳・カーペット等の代表値）
+const CONTACT_GRACE=4;      // 接触グレース窓（サブステップ数）
+const VY_AIRBORNE=0.35;     // これ以上の垂直相対速度は空中扱い (m/s)
 function applyStiction(){
   if(!furniture.length)return;
   const inContact=new Set();
@@ -1306,27 +1416,36 @@ function applyStiction(){
     if(c.bi===roomBody)inContact.add(c.bj);
     else if(c.bj===roomBody)inContact.add(c.bi);
   }
-  const gN=Math.max(9.81+_pose.ay,0);   // 法線方向実効重力（上下動で増減）
-  const demand=Math.hypot(_pose.ax,_pose.az);
+  const geff=Math.max(9.81+_pose.ay,0);   // 法線方向実効重力（上下動で増減）
   for(const f of furniture){
     if(f.def.lamp)continue;
-    if(!inContact.has(f.body)){f.stuck=false;continue;}
-    const rv=Math.hypot(f.body.velocity.x-_pose.vx,f.body.velocity.z-_pose.vz);
-    const spin=f.body.angularVelocity.norm();
-    if(f.stuck===undefined)f.stuck=(rv<SLIP_LOCK&&spin<SPIN_LOCK);
-    // 固着中は「離脱」基準（高）、滑走中は「再固着」基準（低）を使い分ける
-    const slipLimit=f.stuck?SLIP_BREAK:SLIP_LOCK;
-    const spinLimit=f.stuck?SPIN_BREAK:SPIN_LOCK;
-    const muLimit=f.def.mu*gN*(f.stuck?MUS_OVER_MUK:1);
-    if(rv>=slipLimit||spin>=spinLimit||demand>=muLimit*0.95){
-      f.stuck=false;                                          // 限界超過→滑り継続
-      continue;
+    if(inContact.has(f.body))f._cg=CONTACT_GRACE;
+    else if(f._cg>0)f._cg--;
+    const vyRel=Math.abs(f.body.velocity.y-_pose.vy);
+    if(!(f._cg>0)||vyRel>VY_AIRBORNE){f.stuck=false;continue;}
+    const m=f.body.mass, N=m*geff;
+    const Jmax=f.def.mu*MUS_OVER_MUK*N*PHYS_DT;
+    const dvx=f.body.velocity.x-_pose.vx;
+    const dvz=f.body.velocity.z-_pose.vz;
+    const Jneed=m*Math.hypot(dvx,dvz);
+    if(Jneed<=Jmax){
+      // 静止摩擦の上限内 → 必要撃力を全量適用（結果として台と同速）
+      f.body.velocity.x=_pose.vx;
+      f.body.velocity.z=_pose.vz;
+      f.stuck=true;
+      // 接触面ねじり摩擦（鉛直軸）: 上限付き角撃力
+      const wy=f.body.angularVelocity.y;
+      if(wy!==0){
+        const reff=0.3*Math.min(f.def.w||0.4,f.def.d||0.4);
+        const Iy=Math.max(f.body.inertia.y,1e-6);
+        const Lmax=f.def.mu*MUS_OVER_MUK*N*reff*PHYS_DT;
+        const Lneed=Math.abs(Iy*wy);
+        if(Lneed<=Lmax)f.body.angularVelocity.y=0;
+        else f.body.angularVelocity.y-=Math.sign(wy)*Lmax/Iy;
+      }
+    }else{
+      f.stuck=false; // 動摩擦域: cannonの摩擦方程式(μk)に委ねる
     }
-
-    f.stuck=true;
-    f.body.velocity.x=_pose.vx;
-    f.body.velocity.z=_pose.vz;
-    f.body.angularVelocity.scale(0.6,f.body.angularVelocity);
   }
 }
 
@@ -1372,8 +1491,19 @@ function sizeCharts(){
   }
 }
 let cursorPrev=-1;
+let waveView="full"; // "full" | "win"（再生時刻±15秒）
+function waveRange(){
+  if(!proc)return[0,1];
+  if(waveView==="full")return[0,proc.dur];
+  const half=15;
+  let t0=simT-half,t1=simT+half;
+  if(t0<0){t1-=t0;t0=0;}
+  if(t1>proc.dur){t0=Math.max(0,t0-(t1-proc.dur));t1=proc.dur;}
+  return[t0,t1];
+}
 function drawCursor(force){
   if(!proc)return;
+  if(waveView==="win"){drawChartsBase();return;} // 窓が動くため毎回再描画
   const frac=simT/proc.dur;
   if(!force&&Math.abs(frac-cursorPrev)<0.002)return;
   cursorPrev=frac;
@@ -1381,7 +1511,8 @@ function drawCursor(force){
 }
 function drawChartsBase(){
   drawChartsStatic();
-  const frac=simT/proc.dur;
+  const[t0,t1]=waveRange();
+  const frac=(simT-t0)/Math.max(1e-9,t1-t0);
   for(const id of chartIds){
     const c=document.getElementById(id),g=c.getContext("2d");
     g.strokeStyle="#ffffff";g.lineWidth=1;
@@ -1390,6 +1521,7 @@ function drawChartsBase(){
 }
 let staticCache=null;
 function drawChartsStatic(){
+  if(waveView==="win"){drawChartsRaw();return;} // 窓表示はキャッシュ不可
   if(!staticCache){drawChartsRaw();cacheStatic();}
   for(let i=0;i<3;i++){
     const c=document.getElementById(chartIds[i]);
@@ -1404,11 +1536,14 @@ function cacheStatic(){
 }
 function drawChartsRaw(){
   const sets=[proc.acc,proc.vel,proc.dsp];
+  const[t0,t1]=waveRange();
+  const j0=Math.max(0,Math.floor(t0/proc.dt)), j1=Math.min(proc.n-1,Math.ceil(t1/proc.dt));
+  const span=Math.max(1,j1-j0);
   for(let s=0;s<3;s++){
     const c=document.getElementById(chartIds[s]),g=c.getContext("2d");
     const W=c.width,H=c.height;
     g.clearRect(0,0,W,H);
-    let mx=0;
+    let mx=0; // 縦スケールは常に全記録の最大（窓間で比較可能に）
     for(const arr of sets[s])for(let i=0;i<arr.length;i++){const v=Math.abs(arr[i]);if(v>mx)mx=v;}
     if(mx===0)mx=1;
     g.strokeStyle="#2a3442";g.beginPath();g.moveTo(0,H/2);g.lineTo(W,H/2);g.stroke();
@@ -1416,7 +1551,7 @@ function drawChartsRaw(){
       const arr=sets[s][comp];
       g.strokeStyle=compColors[comp];g.lineWidth=1;g.beginPath();
       for(let px=0;px<W;px++){
-        const i0=Math.floor(px/W*arr.length), i1=Math.floor((px+1)/W*arr.length);
+        const i0=j0+Math.floor(px/W*span), i1=j0+Math.floor((px+1)/W*span);
         let lo=1e9,hi=-1e9;
         for(let i=i0;i<Math.max(i1,i0+1);i++){const v=arr[i];if(v<lo)lo=v;if(v>hi)hi=v;}
         g.moveTo(px+0.5,H/2-lo/mx*H/2*0.92);g.lineTo(px+0.5,H/2-hi/mx*H/2*0.92);
@@ -1425,6 +1560,11 @@ function drawChartsRaw(){
     }
     g.fillStyle="#8593a5";g.font=`${10*devicePixelRatio}px monospace`;
     g.fillText("±"+mx.toFixed(1),4*devicePixelRatio,12*devicePixelRatio);
+    if(waveView==="win"){
+      g.fillText(t0.toFixed(0)+"s",4*devicePixelRatio,H-4*devicePixelRatio);
+      const lbl=t1.toFixed(0)+"s";
+      g.fillText(lbl,W-(lbl.length*6+4)*devicePixelRatio,H-4*devicePixelRatio);
+    }
   }
 }
 
@@ -1629,36 +1769,57 @@ document.getElementById("sceneSel").onchange=e=>{
 const MODAL_TEXT={
 disc:`<h3>免責事項</h3>
 <ul>
-<li>本シミュレーターは<b>教育・防災啓発を目的とした簡易的な物理演算デモ</b>です。実際の地震時における家具の挙動・建物応答を正確に再現するものではありません。</li>
-<li>剛体物理・摩擦・建物モデル（等質量等剛性のせん断型多質点系）はいずれも簡略化されており、<span class="warn">構造設計、耐震診断、家具固定の要否判断、安全性評価等の根拠として使用しないでください。</span></li>
-<li>シミュレーション結果の利用により生じたいかなる損害についても、作成者は責任を負いません。</li>
-<li>K-NET / KiK-net（防災科研）、気象庁等の強震記録を読み込む場合は、各機関のデータ利用規約に従ってください。</li>
-<li>実際の地震への備え（家具固定・避難計画等）は、自治体や専門機関の公式情報に基づいて行ってください。</li>
+<li>本シミュレーターは<b>教育・防災啓発を目的とした簡易的な物理演算デモ</b>であり、実際の地震時における家具の挙動・建物応答・室内被害を正確に再現・予測するものではありません。</li>
+<li>結果は物理エンジンの数値計算条件（タイムステップ、接触剛性、摩擦モデル等）に依存し、同じ入力でも設定により大きく変わり得ます。<span class="warn">構造設計、耐震診断、家具固定の要否判断、安全性・危険性の評価、保険・法務等いかなる実務判断の根拠にも使用しないでください。</span></li>
+<li>シミュレーション結果および本ツールの利用・利用不能により生じたいかなる直接・間接の損害についても、作成者は一切の責任を負いません。</li>
+<li>K-NET / KiK-net（防災科学技術研究所）、気象庁等の強震記録を読み込む場合は、各機関が定めるデータ利用規約・出典表示条件に従ってください。記録データ自体は本ツールに含まれません。</li>
+<li>実際の地震への備え（家具固定・配置見直し・避難計画等）は、自治体・気象庁・専門機関の公式情報および専門家の助言に基づいて行ってください。</li>
+</ul>
+<h3>物理モデルの限界・注意点</h3>
+<ul>
+<li><b>剛体近似</b>：家具は変形・破損しない剛体として扱い、引き出しの飛び出し、扉の開閉、収納物の散乱、ガラスの破損等は表現しません。</li>
+<li><b>摩擦モデル</b>：物理エンジンの反復ソルバーは完全な静止摩擦（固着）を表現できないため、床接触中の剛体にはクーロン摩擦の上限（μs·N、μs=1.3μk）を超えない範囲の摩擦撃力を補助的に与えています。上限内では台と同速に達し（静止摩擦の実挙動）、上限を超えると動摩擦（μk）での滑走に移行します。摩擦係数は代表値であり、実際の床材・脚形状・経年により大きく異なります。</li>
+<li><b>衝突・着地</b>：反発係数0の非弾性衝突を仮定しています。タイムステップ（240Hz）に依存する貫通補正により、強い鉛直加速度を受けた直後の着地で微小なジャンプが生じることがあります。接触剛性の軟化と接触グレース窓（数ステップ）でこの影響を低減していますが、完全には除去できません。</li>
+<li><b>吊り具</b>：紐は伸びない剛リンク（点対点拘束）で近似しており、紐のたわみ・切断は表現しません。天井は剛体として扱い、吊り具は天井に衝突して止まります。</li>
+<li><b>建物モデル</b>：等質量（1000t/階）・等剛性のせん断型多質点系という強い理想化を用いています。実建物の剛性分布・偏心・非線形（塑性化・損傷）・地盤との相互作用は考慮していません。応答は弾性範囲の目安です。</li>
+<li><b>波形処理</b>：加速度記録の積分（速度・変位）にはハイパスフィルタ等の処理を伴うため、長周期成分・永久変位は正確には復元されません。</li>
 </ul>`,
 usage:`<h3>基本の流れ</h3>
 <ul>
-<li><b>① 波形の用意</b>：K-NET/KiK-net または気象庁の加速度CSVを「波形ファイル」から読み込む。記録がない場合は「正弦波加振」で方向・周期・最大変位を指定して生成。</li>
-<li><b>② 室内空間</b>：一般家庭（和室）／オフィスを選択。家具はチェックで配置切替、質量・重心高も変更可能。</li>
-<li><b>③ 建物応答（任意）</b>：「建物内の階で加振」をONにし、構造種別（S造/RC造）・階数・対象階を指定すると、多質点せん断モデルの時刻歴応答解析（Newmark-β法）で求めた床応答で加振します。</li>
-<li><b>④ 加振開始</b>：再生速度・振幅倍率・NS↔EW入替・開始スキップを設定して実行。</li>
+<li><b>① 波形の用意</b>：「波形ファイル」からK-NET/KiK-net ASCII形式または気象庁の加速度CSV（3成分）を読み込みます。ヘッダから観測点・発震時刻等を自動抽出し、加速度を積分して速度・変位波形を生成します。記録がない場合は「正弦波加振」で方向（NS/EW）・周期・最大変位・継続時間を指定して合成波を生成できます（両端2周期テーパ付き）。</li>
+<li><b>② 室内空間</b>：「室内空間」で一般家庭（和室 4.2×4.2m）／オフィス（6.4×5.2m）を切替。家具・小物はチェックで個別に配置切替でき、質量と重心高（%）も変更可能です。重心を高くすると転倒しやすくなります。</li>
+<li><b>③ 建物応答（任意）</b>：「建物内の階で加振」をONにすると、多質点せん断モデルの時刻歴応答解析（Newmark-β法、Rayleigh減衰）で求めた指定階の床応答（絶対加速度・速度・変位）で部屋を加振します。構造種別（S造：T₁=0.03H・h=2% ／ RC造：T₁=0.02H・h=3%、階高4m）、階数（3〜50）、対象階を指定します。地表比のPA増幅率が表示されます。</li>
+<li><b>④ 加振</b>：「加振開始」で実行。再生速度（スロー〜等速）、振幅倍率、NS↔EW入替、開始時刻スキップを設定できます。「初期配置に戻す」で何度でもやり直せます。</li>
 </ul>
-<h3>画面操作</h3>
+<h3>画面の見方・操作</h3>
 <ul>
-<li>ドラッグ：視点回転 ／ ホイール：ズーム</li>
-<li>右上ボタン：波形チャート、NS-EW変位軌跡（オービット）の表示切替</li>
-<li>左上「パネル」：操作パネルの格納・展開</li>
-<li>画面上部HUD：直近1秒間の最大合成加速度（gal）</li>
+<li><b>3D視点</b>：ドラッグで回転、ホイール（ピンチ）でズーム。</li>
+<li><b>波形パネル</b>（右上「波形」）：加速度・速度・変位の3成分波形と再生カーソル。右上のボタンで「全体表示 ⇄ 再生時刻±15秒の窓表示」を切替できます。縦軸は全記録の最大値で固定され、窓間で比較できます。</li>
+<li><b>変位軌跡</b>（右上「軌跡 NS-EW」）：水平面内の変位オービット。全軌跡（淡色）、直近2秒（橙）、現在位置（白点）を表示します。</li>
+<li><b>加速度HUD</b>（画面上部）：直近1秒間の最大合成加速度（gal）。振幅倍率を反映します。</li>
+<li><b>状態パネル</b>：家具ごとの傾き・移動量・転倒/移動判定、吊り具の振れ角を表示します。</li>
+<li><b>操作パネル</b>：左上「パネル」ボタンで格納・展開できます。</li>
+</ul>
+<h3>観察のヒント</h3>
+<ul>
+<li>背が高く重心の高い家具（本棚・キャビネット）は短周期の強い揺れで転倒しやすくなります。</li>
+<li>キャスター付きの複合機・オフィスチェアは摩擦が小さく、弱い揺れでも大きく走行します。</li>
+<li>長周期（2〜6秒）・大変位の正弦波や、高層階の床応答を与えると、超高層ビルにおける長周期地震動の「ゆっくり大きい」揺れと家具の滑走が観察できます。</li>
+<li>振幅倍率・質量・重心高を変えて、同じ地震での挙動差を比べてみてください。</li>
 </ul>`,
 faq:`<h3>よくある質問</h3>
 <ul>
-<li><b>Q. 対応している波形形式は？</b><br>A. K-NET/KiK-net ASCII形式および気象庁の加速度CSV（3成分）です。100Hz以外は内部で100Hzに再標本化します。</li>
-<li><b>Q. gal とは？</b><br>A. 加速度の単位で 1 gal = 1 cm/s²。重力加速度は約980 galです。</li>
-<li><b>Q. 家具はどうなると「転倒」「移動」と判定される？</b><br>A. 傾きが45°を超えると転倒、水平移動が5cmを超えると移動と表示します。</li>
-<li><b>Q. 建物モデルの諸元は？</b><br>A. 階高4m・各階1000tの等質量等剛性せん断型。1次固有周期はS造 T₁=0.03H、RC造 T₁=0.02H に整合するよう剛性を設定し、減衰はRayleigh型（S造2%、RC造3%）です。</li>
-<li><b>Q. 上層階ほど揺れが大きくなるのはなぜ？</b><br>A. 建物の固有周期に近い成分が共振的に増幅されるためです。長周期地震動では超高層の上層階で地表より大きな揺れになります。</li>
-<li><b>Q. 吊り照明の振れが一定以上大きくならない？</b><br>A. 紐吊りの物理近似の都合上、振れ角を約70°で制限しています。</li>
-<li><b>Q. 動作が重い場合は？</b><br>A. 家具のチェックを減らす、波形・軌跡パネルを閉じる、再生速度を下げる等を試してください。</li>
-<li><b>Q. 記録データを持っていない場合は？</b><br>A. 「正弦波加振」で任意の周期・振幅の揺れを生成できます。長周期（2〜6s）大変位を与えると高層階の長周期地震動の体感に近い挙動が観察できます。</li>
+<li><b>Q. 対応している波形形式は？</b><br>A. K-NET/KiK-net ASCII形式、および気象庁の加速度CSV（3成分）です。文字コードはShift_JIS/UTF-8を自動判別し、100Hz以外のサンプリングは内部で100Hzに再標本化します。1成分のみの記録には対応していません。</li>
+<li><b>Q. gal とは？ 震度との関係は？</b><br>A. 加速度の単位で 1 gal = 1 cm/s²、重力加速度は約980 galです。震度は加速度だけでなく周期・継続時間も加味した計測震度から求まるため、galと震度は一対一には対応しません。</li>
+<li><b>Q. 「転倒」「移動」はどう判定している？</b><br>A. 鉛直軸からの傾きが45°を超えると転倒、初期位置からの水平移動が5cmを超えると移動と表示します（一度判定されると保持されます）。</li>
+<li><b>Q. 家具が揺れの途中でピタッと止まるのはなぜ？</b><br>A. 静止摩擦の表現です。床との相対速度を消すのに必要な力積がクーロン摩擦の上限（μs·N）以下のときだけ固着し、超えると動摩擦で滑ります。慣性力が摩擦限界を往復するため「滑って→止まる」を繰り返します。</li>
+<li><b>Q. 建物モデルの諸元は？</b><br>A. 階高4m・各階1000tの等質量等剛性せん断型です。1次固有周期はS造 T₁=0.03H、RC造 T₁=0.02H に整合するよう剛性を逆算し、減衰はRayleigh型（1次・2次モードでS造2%／RC造3%）、数値積分はNewmark-β法（β=1/4）です。</li>
+<li><b>Q. 上層階ほど揺れが大きくなるのはなぜ？</b><br>A. 建物の固有周期に近い成分が共振的に増幅されるためです。特に長周期地震動では超高層の上層階で地表の数倍の変位になることがあります。一方、短周期成分は上層で必ずしも増幅されません。</li>
+<li><b>Q. 吊り照明はどこまで振れる？</b><br>A. 天井を剛体として扱っており、大振幅時は吊り具が天井に衝突して止まります（天井を突き抜けての一回転は起きません）。紐は伸びない剛リンク近似です。</li>
+<li><b>Q. 家具が着地の瞬間に小さく跳ねることがある？</b><br>A. タイムステップ（240Hz）に依存した貫通補正の既知の副作用です。接触剛性の軟化と接触グレース窓で低減していますが、強い上下動では残ることがあります。</li>
+<li><b>Q. 動作が重い場合は？</b><br>A. 家具・小物のチェックを減らす、波形・軌跡パネルを閉じる、他のタブを閉じる、再生速度を下げる等を試してください。物理演算は240Hz固定のため、CPU性能の影響を受けます。</li>
+<li><b>Q. 記録データはどこで入手できる？</b><br>A. K-NET/KiK-netは防災科研の強震観測網サイト（要利用登録）、気象庁の強震波形は気象庁サイトで公開されています。入手したデータは各機関の利用規約に従ってください。</li>
+<li><b>Q. 結果を防災対策の判断に使ってよい？</b><br>A. いいえ。本ツールは挙動の傾向を体感するための教材です。家具固定の要否や安全性の判断は、専門機関の指針・専門家の助言に基づいてください。</li>
 </ul>`};
 function showModal(tab){
   document.getElementById("modalBg").classList.add("show");
@@ -1686,6 +1847,12 @@ document.getElementById("waveToggle").onclick=()=>{
   document.getElementById("orbitToggle").classList.toggle("shift",shown);
   document.getElementById("infoBtn").classList.toggle("shift",shown);
   if(shown&&proc){sizeCharts();staticCache=null;drawChartsBase();}
+};
+document.getElementById("waveViewBtn").onclick=()=>{
+  waveView=waveView==="full"?"win":"full";
+  document.getElementById("waveViewBtn").textContent=waveView==="full"?"全体":"±15秒";
+  staticCache=null;
+  if(proc)drawChartsBase();
 };
 document.getElementById("panelToggle").onclick=()=>{
   const p=document.getElementById("panel");
