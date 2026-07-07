@@ -101,7 +101,7 @@ export function computeJmaIntensity(acc: Float64Array[], fs: number): JmaResult 
   const sorted = Array.from(mag).sort((a, b) => b - a)
   const idx = Math.min(sorted.length - 1, Math.max(0, Math.round(0.3 * fs) - 1))
   const a0 = sorted[idx]
-  // JMA 官方為「切り捨て（向零截斷）」至小數第 2 位
-  const I = a0 > 0 ? Math.trunc((2 * Math.log10(a0) + 0.94) * 100) / 100 : 0
+  // JMA 官方取位：小數第3位四捨五入後、截斷至小數第1位（報 1 位小數，如 5.3）
+  const I = a0 > 0 ? Math.floor(Math.round((2 * Math.log10(a0) + 0.94) * 100) / 10) / 10 : 0
   return { I, shindo: shindoClass(I), a0 }
 }

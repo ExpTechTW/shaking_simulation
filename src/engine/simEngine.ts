@@ -1186,7 +1186,8 @@ export class SimEngine {
         continue
       }
       const aSlide = f.def.mu * MUS_OVER_MUK * geff
-      const aTip = (9.81 * f.halfBase) / Math.max(f.cogY, 1e-3)
+      // 傾倒臨界亦用 g_eff（含垂直激振耦合，與滑動門檻對稱）：a_crit=(g+a_v)·b/h
+      const aTip = (geff * f.halfBase) / Math.max(f.cogY, 1e-3)
       f.body.quaternion.vmult(this._up, this._tmpv)
       const tilt = Math.acos(Math.max(-1, Math.min(1, this._tmpv.y)))
       // 靜止域 = 未傾斜 且 台面加速度低於滑動與傾倒兩臨界。一旦開始傾斜（搖擺/傾倒
