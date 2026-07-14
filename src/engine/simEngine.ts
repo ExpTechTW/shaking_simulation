@@ -112,6 +112,7 @@ export class SimEngine {
   private ROOM_H = 2.4
   private roomOffset = { px: 0, py: 0, pz: 0, vx: 0, vy: 0, vz: 0 }
   private _pose = { px: 0, py: 0, pz: 0, vx: 0, vy: 0, vz: 0, ax: 0, ay: 0, az: 0 }
+  private _vpose = { px: 0, py: 0, pz: 0, vx: 0, vy: 0, vz: 0, ax: 0, ay: 0, az: 0 } // 暫停時的視覺位移
 
   // 相機
   private camTheta = 0.8
@@ -442,6 +443,9 @@ export class SimEngine {
       fallen: false,
       slid: false,
       stuck: true,
+      _slvx: 0, // 庫倫滑塊速度狀態
+      _slvz: 0,
+      _sliding: false,
     }
   }
 
@@ -1053,11 +1057,10 @@ export class SimEngine {
   placeFurniture() {
     this.stopSimCore()
     this.clearFurniture()
-    if (this.proc) this.tablePose(this.startT(), this.roomOffset)
-    else this.roomOffset = { px: 0, py: 0, pz: 0, vx: 0, vy: 0, vz: 0 }
-    this.roomBody.position.set(this.roomOffset.px, this.roomOffset.py, this.roomOffset.pz)
+    // 地動(非慣性)座標系：房間固定於原點，家具置於靜止位置；地動以偽力施加。
+    this.roomOffset = { px: 0, py: 0, pz: 0, vx: 0, vy: 0, vz: 0 }
+    this.roomBody.position.set(0, 0, 0)
     this.roomBody.velocity.set(0, 0, 0)
-    this.roomGroup.position.set(this.roomOffset.px, this.roomOffset.py, this.roomOffset.pz)
     for (const def of SCENES[this.sceneKey].furn) {
       const st = this.furn[def.id]
       if (!st || !st.on) continue
@@ -1114,15 +1117,17 @@ export class SimEngine {
       while (this.physT < this.simT) {
         this.physT += PHYS_DT
         this.tablePose(this.physT, this._pose)
-        this.roomBody.position.set(this._pose.px, this._pose.py, this._pose.pz)
-        this.roomBody.velocity.set(this._pose.vx, this._pose.vy, this._pose.vz)
+        // 非慣性(地動)座標系：偽力=地動加速度，以旋轉重力直接施加於全體剛體。
+        // 如此家具感受到「真實的」地動加速度(含高頻)，不再受「以位移驅動→接觸傳遞
+        // 需二次微分」的高頻損失。房間固定不動，視覺位移於下方以 roomGroup 呈現。
+        this.world.gravity.set(-this._pose.ax, -9.81 - this._pose.ay, -this._pose.az)
         this.world.step(PHYS_DT)
         this.applyStiction()
       }
-      this.roomGroup.position.set(this._pose.px, this._pose.py, this._pose.pz)
       if (this.liveRefs.timeEl) this.liveRefs.timeEl.textContent = this.simT.toFixed(1) + " s"
       if (this.simT >= this.proc.dur) {
         this.running = false
+        this.world.gravity.set(0, -9.81, 0)
         this.flash("加振結束")
       }
       this.updateStatus()
@@ -1130,20 +1135,29 @@ export class SimEngine {
       this.updateAccHud()
       this.drawOrbit()
     }
+    // 視覺位移：房間依地動位移搖晃（僅視覺，不影響物理）；家具網格同步平移以維持相對關係。
+    let dx = 0
+    let dy = 0
+    let dz = 0
+    if (this.proc) {
+      if (this.running) { dx = this._pose.px; dy = this._pose.py; dz = this._pose.pz }
+      else { this.tablePose(this.simT, this._vpose); dx = this._vpose.px; dy = this._vpose.py; dz = this._vpose.pz }
+    }
+    this.roomGroup.position.set(dx, dy, dz)
     const _pv = new CANNON.Vec3()
     for (const f of this.furniture) {
-      f.mesh.position.copy(f.body.position)
+      f.mesh.position.set(f.body.position.x + dx, f.body.position.y + dy, f.body.position.z + dz)
       f.mesh.quaternion.copy(f.body.quaternion)
       if (f.cords)
         for (const c of f.cords) {
           f.body.quaternion.vmult(c.drawLocal, _pv)
           const pts = c.line.geometry.attributes.position.array
-          pts[0] = c.anchorLocal.x + this.roomBody.position.x
-          pts[1] = c.anchorLocal.y + this.roomBody.position.y
-          pts[2] = c.anchorLocal.z + this.roomBody.position.z
-          pts[3] = f.body.position.x + _pv.x
-          pts[4] = f.body.position.y + _pv.y
-          pts[5] = f.body.position.z + _pv.z
+          pts[0] = c.anchorLocal.x + dx
+          pts[1] = c.anchorLocal.y + dy
+          pts[2] = c.anchorLocal.z + dz
+          pts[3] = f.body.position.x + _pv.x + dx
+          pts[4] = f.body.position.y + _pv.y + dy
+          pts[5] = f.body.position.z + _pv.z + dz
           c.line.geometry.attributes.position.needsUpdate = true
         }
     }
@@ -1180,28 +1194,48 @@ export class SimEngine {
       if (f.def.lamp) continue
       if (inContact.has(f.body)) f._cg = CONTACT_GRACE
       else if (f._cg > 0) f._cg--
-      const vyRel = Math.abs(f.body.velocity.y - this._pose.vy)
+      const vyRel = Math.abs(f.body.velocity.y) // 房間固定 → 相對地板(0)的垂直速度
       if (!(f._cg > 0) || vyRel > VY_AIRBORNE) {
         f.stuck = false
+        f._sliding = false
         continue
       }
-      const aSlide = f.def.mu * MUS_OVER_MUK * geff
-      // 傾倒臨界亦用 g_eff（含垂直激振耦合，與滑動門檻對稱）：a_crit=(g+a_v)·b/h
-      const aTip = (geff * f.halfBase) / Math.max(f.cogY, 1e-3)
+      const aSlide = f.def.mu * MUS_OVER_MUK * geff // 靜摩擦臨界 μs·g_eff
+      const aTip = (geff * f.halfBase) / Math.max(f.cogY, 1e-3) // 傾倒臨界 (g+a_v)·b/h
       f.body.quaternion.vmult(this._up, this._tmpv)
       const tilt = Math.acos(Math.max(-1, Math.min(1, this._tmpv.y)))
-      // 靜止域 = 未傾斜 且 台面加速度低於滑動與傾倒兩臨界。一旦開始傾斜（搖擺/傾倒
-      // 進行中，tilt≥2°）即完全放行，交由 cannon 自然演化搖擺/傾倒動力學，避免固著抑制搖擺。
-      if (aH < aSlide && aH < aTip && tilt < 0.035) {
-        f.body.velocity.x = this._pose.vx
-        f.body.velocity.z = this._pose.vz
+      const speed = Math.hypot(f.body.velocity.x, f.body.velocity.z)
+      const spin = Math.hypot(f.body.angularVelocity.x, f.body.angularVelocity.z) // 搖擺角速度
+      // 「真正靜止」= 直立、未搖擺、速度極小。只有此時才鎖定（消除潛移）；否則家具仍在
+      // 主動反應，不可重置，否則高頻激振會每個週期把已累積的搖擺/滑動抹除。
+      const squat = aSlide < aTip // 矮寬家具：滑動先於傾倒
+      if (tilt >= 0.035 || spin >= 0.2) {
+        // 搖擺/傾倒進行中 → 完全放行，交由 cannon 於旋轉重力下演化動力學
+        f.stuck = false
+        f._sliding = false
+      } else if (aH >= aTip) {
+        // 傾倒域：交由 cannon（旋轉重力使其繞底邊傾倒）；不介入水平速度以免抹除傾倒力矩
+        f.stuck = false
+        f._sliding = false
+      } else if (squat && (speed >= 0.03 || aH >= aSlide)) {
+        // 滑動域（僅矮寬家具，滑動先於傾倒）：以庫倫滑塊(Newmark/Shao-Tung)明確積分水平速度，
+        // 覆寫 cannon 對固定地板的過度固著。偽力=地動加速度 → 相對地板加速度 = -a，
+        // 動摩擦 μk·g_eff 恆對速度反向。（高瘦家具不走此路，以免滑塊覆寫抹除傾倒過程。）
+        if (!f._sliding) { f._slvx = f.body.velocity.x; f._slvz = f.body.velocity.z; f._sliding = true }
+        f._slvx += -this._pose.ax * PHYS_DT
+        f._slvz += -this._pose.az * PHYS_DT
+        const sp = Math.hypot(f._slvx, f._slvz)
+        const fric = f.def.mu * geff * PHYS_DT
+        if (sp > fric) { const k = (sp - fric) / sp; f._slvx *= k; f._slvz *= k } else { f._slvx = 0; f._slvz = 0 }
+        f.body.velocity.x = f._slvx
+        f.body.velocity.z = f._slvz
+        f.stuck = false
+      } else {
+        // 靜止域（直立、次臨界）：不重置位置/速度（以免抹除搖擺），交由 cannon 接觸摩擦自然
+        // 持住——其對固定地板過度固著，恰好防止數值潛移（實測殘留 <0.01cm）。僅施加鉛直軸
+        // 扭轉摩擦以抑制不自然自轉。
         f.stuck = true
-        // 近乎直立時連位置一併鎖定（消除逐步位置漂移＝潛移，及純垂直激振的偽水平漂移）
-        if (tilt < 0.02) {
-          f.body.position.x = this.roomBody.position.x + f.startPos.x
-          f.body.position.z = this.roomBody.position.z + f.startPos.z
-        }
-        // 鉛直軸扭轉摩擦（抑制不自然自轉）
+        f._sliding = false
         const wy = f.body.angularVelocity.y
         if (wy !== 0) {
           const N = f.body.mass * geff
@@ -1212,8 +1246,6 @@ export class SimEngine {
           if (Lneed <= Lmax) f.body.angularVelocity.y = 0
           else f.body.angularVelocity.y -= (Math.sign(wy) * Lmax) / Iy
         }
-      } else {
-        f.stuck = false
       }
     }
   }
@@ -1611,7 +1643,7 @@ export class SimEngine {
 
   play() {
     if (!this.proc) return
-    if (this.running) { this.running = false; this.emit(); return }
+    if (this.running) { this.running = false; this.world.gravity.set(0, -9.81, 0); this.emit(); return }
     if (this.simT >= this.proc.dur || !this.furniture.length) this.placeFurniture()
     this.running = true
     this.emit()
@@ -1619,6 +1651,7 @@ export class SimEngine {
   stop() { this.placeFurniture(); this.emit() }
   private stopSimCore() {
     this.running = false
+    this.world.gravity.set(0, -9.81, 0) // 回復正常重力（暫停/停止時房間內為靜態）
     this.simT = this.physT = this.startT()
     if (this.liveRefs.timeEl) this.liveRefs.timeEl.textContent = this.simT.toFixed(1) + " s"
     if (this.proc) this.drawChartsBase()
