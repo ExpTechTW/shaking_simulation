@@ -55,7 +55,7 @@ export function WaveDrawer({ engine, state }: { engine: SimEngine; state: Engine
       </div>
       {chart(cA, "加速度 (gal)", "var(--acc)", p?.pga)}
       {chart(cV, "速度 (cm/s)", "var(--vel)", p?.pgv)}
-      {chart(cD, "變位 (cm)", "var(--dsp)", p?.pgd)}
+      {chart(cD, "位移 (cm)", "var(--dsp)", p?.pgd)}
     </div>
   )
 }

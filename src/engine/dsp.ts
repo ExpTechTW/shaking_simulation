@@ -1,9 +1,9 @@
 /* =====================================================================
  * 訊號處理（DSP）與建物應答分析
  * ---------------------------------------------------------------------
- * - 加速度積分為速度/變位：採氣象廳（JMA）官方積分漸化式（齋藤1978 係數設計）。
- *   速度＝截止5秒3次Butterworth積分特性；變位＝1倍強震計特性(T0=6s, h=0.55)。
- *   漸化式係數為 100Hz 設計，非 100Hz 之記錄先線性重取樣至 100Hz。
+ * - 加速度積分為速度/位移：採氣象廳（JMA）官方積分遞迴式（齋藤1978 係數設計）。
+ *   速度＝截止5秒3次Butterworth積分特性；位移＝1倍強震計特性(T0=6s, h=0.55)。
+ *   遞迴式係數為 100Hz 設計，非 100Hz 之記錄先線性重取樣至 100Hz。
  * - 建物應答：多質點剪力型模型之時刻歷應答（Newmark-β 法、Rayleigh 阻尼）。
  * ===================================================================== */
 
@@ -28,9 +28,9 @@ interface AccRecord {
   fmt: string
 }
 
-/* 氣象廳 積分漸化式（齋藤1978 之係數設計，設計取樣 100Hz）
+/* 氣象廳 積分遞迴式（齋藤1978 之係數設計，設計取樣 100Hz）
    速度：截止5秒之3次 Butterworth 積分特性
-   變位：1倍強震計特性（固有周期 T0=6s，減衰定數 h=0.55）之漸化式 */
+   位移：1倍強震計特性（固有周期 T0=6s，減衰定數 h=0.55）之遞迴式 */
 function jmaVel(a: Float64Array): Float64Array {
   const G = 0.004937561699
   const A1 = -2.974867761716
@@ -77,12 +77,12 @@ function resampleLinear(x: Float64Array, dtIn: number, dtOut: number): Float64Ar
   return y
 }
 
-/** 由加速度記錄計算加速度/速度/變位三成分波形。
- *  採氣象廳官方積分漸化式（漸化式係數為 100Hz 設計，故先線性重取樣至 100Hz）。 */
+/** 由加速度記錄計算加速度/速度/位移三成分波形。
+ *  採氣象廳官方積分遞迴式（遞迴式係數為 100Hz 設計，故先線性重取樣至 100Hz）。 */
 export function processRecord(rec: AccRecord): Proc {
   let dt = rec.dt
   let accIn = rec.acc
-  // 漸化式係數為 100Hz 設計 → 非 100Hz 先重取樣
+  // 遞迴式係數為 100Hz 設計 → 非 100Hz 先重取樣
   if (Math.abs(dt - 0.01) > 1e-6) {
     accIn = accIn.map((a) => resampleLinear(a, dt, 0.01))
     dt = 0.01
@@ -98,8 +98,8 @@ export function processRecord(rec: AccRecord): Proc {
     const a0 = new Float64Array(raw.length)
     for (let i = 0; i < raw.length; i++) a0[i] = raw[i] - m // 去除平均偏移
     acc.push(a0)
-    vel.push(jmaVel(a0)) // 積分漸化式（cm/s）
-    dsp.push(jmaDisp(a0)) // 積分漸化式（cm）
+    vel.push(jmaVel(a0)) // 積分遞迴式（cm/s）
+    dsp.push(jmaDisp(a0)) // 積分遞迴式（cm）
   }
   const n = acc[0].length
   let pga = 0
@@ -214,7 +214,7 @@ export function buildingResponse(pg: Proc, cfg: BldCfg): Proc {
       }
       outA[t] = (a[fl - 1] + ag) * 100 // 絕對加速度 gal
       outV[t] = pg.vel[comp][t] + v[fl - 1] * 100 // 絕對速度 cm/s
-      outD[t] = pg.dsp[comp][t] + u[fl - 1] * 100 // 絕對變位 cm
+      outD[t] = pg.dsp[comp][t] + u[fl - 1] * 100 // 絕對位移 cm
     }
     acc.push(outA)
     vel.push(outV)
@@ -248,7 +248,7 @@ export function buildingResponse(pg: Proc, cfg: BldCfg): Proc {
   }
 }
 
-/** 由方向、周期、最大變位、持續時間生成正弦波加振記錄。 */
+/** 由方向、周期、最大位移、持續時間生成正弦波震動記錄。 */
 export function generateSine(dir: "NS" | "EW", T: number, A: number, dur: number): Proc {
   const dt = 0.01
   const n = Math.round(dur / dt) + 1

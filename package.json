@@ -3,7 +3,7 @@
   "private": true,
   "version": "2.0.0",
   "type": "module",
-  "description": "強震動室內家具挙動模擬器 — Vite + React + Tailwind + shadcn/ui",
+  "description": "強震動室內家具行為模擬器 — Vite + React + Tailwind + shadcn/ui",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

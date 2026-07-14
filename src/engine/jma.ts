@@ -2,7 +2,7 @@
  * 氣象廳（JMA）計測震度計算
  * 依 https://www.jma.go.jp/jma/kishou/know/jishin/kyoshin/kaisetsu/calc_sindo.html
  * ---------------------------------------------------------------------
- * 對三分量加速度（gal）於頻域套用 JMA 濾波器（週期效應×高域遮斷×低域遮斷），
+ * 對三分量加速度（gal）於頻域套用 JMA 濾波器（週期效應×高頻截止×低頻截止），
  * 反轉換回時域取向量合成 a(t)，求「合計 0.3 秒以上超過的加速度 a0」，
  * 計測震度 I = 2·log10(a0) + 0.94。
  * ===================================================================== */
@@ -38,16 +38,16 @@ function fft(re: Float64Array, im: Float64Array, inverse = false): void {
   if (inverse) for (let i = 0; i < n; i++) { re[i] /= n; im[i] /= n }
 }
 
-/** JMA 濾波器 G(f)＝週期效應 × 高域遮斷 × 低域遮斷 */
+/** JMA 濾波器 G(f)＝週期效應 × 高頻截止 × 低頻截止 */
 function jmaFilter(f: number): number {
   if (f <= 0) return 0
   const gp = Math.sqrt(1 / f) // 週期效應
-  const y = f / 10 // 高域遮斷（fc=10Hz）
+  const y = f / 10 // 高頻截止（fc=10Hz）
   const gh = Math.pow(
     1 + 0.694 * y ** 2 + 0.241 * y ** 4 + 0.0557 * y ** 6 + 0.009664 * y ** 8 + 0.00134 * y ** 10 + 0.000155 * y ** 12,
     -0.5,
   )
-  const gl = Math.sqrt(1 - Math.exp(-((f / 0.5) ** 3))) // 低域遮斷（fl=0.5Hz）
+  const gl = Math.sqrt(1 - Math.exp(-((f / 0.5) ** 3))) // 低頻截止（fl=0.5Hz）
   return gp * gh * gl
 }
 

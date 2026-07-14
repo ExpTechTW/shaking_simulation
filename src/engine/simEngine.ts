@@ -1128,7 +1128,7 @@ export class SimEngine {
       if (this.simT >= this.proc.dur) {
         this.running = false
         this.world.gravity.set(0, -9.81, 0)
-        this.flash("加振結束")
+        this.flash("震動結束")
       }
       this.updateStatus()
       this.drawCursor()
@@ -1164,7 +1164,7 @@ export class SimEngine {
     this.renderer.render(this.scene, this.camera)
   }
 
-  /* 撃力式靜摩擦（三區判定）。
+  /* 衝量式靜摩擦（三區判定）。
      ---------------------------------------------------------------------
      cannon 的接觸點摩擦本身能正確表現「滑動」與「繞底邊傾倒/搖擺」（力矩自然
      在底面發育），但對運動學地板會過度固著、且在微小往復下殘留數值潛移。
@@ -1277,7 +1277,7 @@ export class SimEngine {
       if (slide > 5) f.slid = true
       let st: string
       let cls: string
-      if (f.fallen) { st = "轉倒"; cls = "text-acc" }
+      if (f.fallen) { st = "傾倒"; cls = "text-acc" }
       else if (f.slid) { st = `移動 ${slide.toFixed(0)}cm`; cls = "text-dsp" }
       else { st = `傾斜 ${tilt.toFixed(0)}°`; cls = "text-muted-foreground" }
       html += `<div class="flex justify-between"><span>${f.def.name}</span><span class="font-mono ${cls}">${st}</span></div>`
@@ -1414,7 +1414,7 @@ export class SimEngine {
     }
   }
 
-  /* ------------------------------------------------------- 變位軌跡 */
+  /* ------------------------------------------------------- 位移軌跡 */
   private niceStep(mx: number) {
     const e = Math.pow(10, Math.floor(Math.log10(mx)))
     for (const m of [1, 2, 5, 10]) if (m * e >= mx / 2.2) return m * e
@@ -1565,7 +1565,7 @@ export class SimEngine {
       intensity,
     }
     this.applyBuildingMode()
-    this.flash(`讀取完成（JMA 積分漸化式）／計測震度 ${intensity.I.toFixed(1)}（震度${intensity.shindo}）`)
+    this.flash(`讀取完成（JMA 積分遞迴式）／計測震度 ${intensity.I.toFixed(1)}（震度${intensity.shindo}）`)
   }
   loadSample() {
     return fetch(`${import.meta.env.BASE_URL}sample.mseed`)
