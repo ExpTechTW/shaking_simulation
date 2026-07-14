@@ -5,7 +5,37 @@ import { WaveDrawer } from "@/components/WaveDrawer"
 import { OrbitPanel } from "@/components/OrbitPanel"
 import { AccHud } from "@/components/AccHud"
 import { InfoModal } from "@/components/InfoModal"
-import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import { PanelLeftClose, PanelLeftOpen, Activity, Orbit, Info } from "lucide-react"
+
+/** 浮動圖示切換鈕（含 active 高亮狀態） */
+function IconToggle({
+  active,
+  title,
+  onClick,
+  children,
+}: {
+  active?: boolean
+  title: string
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      title={title}
+      aria-label={title}
+      onClick={onClick}
+      className={cn(
+        "flex size-9 items-center justify-center rounded-md border backdrop-blur transition-colors",
+        active
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border bg-card/80 text-muted-foreground hover:bg-secondary hover:text-foreground",
+      )}
+    >
+      {children}
+    </button>
+  )
+}
 
 export default function App() {
   const viewRef = useRef<HTMLDivElement>(null)
@@ -38,7 +68,7 @@ export default function App() {
 
   const waveOpen = !!state?.waveOpen
   const orbitOpen = !!state?.orbitOpen
-  const shiftRight = waveOpen ? "350px" : "10px"
+  const shiftRight = waveOpen ? 350 : 10
 
   return (
     <div className="relative h-full w-full overflow-hidden">
@@ -54,44 +84,31 @@ export default function App() {
       </div>
 
       {/* 面板開闔 */}
-      <Button
-        variant="secondary"
-        className="absolute top-2.5 z-40 h-8 text-[12px] transition-[left] duration-200"
-        style={{ left: panelOpen ? "264px" : "10px" }}
-        onClick={() => setPanelOpen((v) => !v)}
+      <div
+        className="absolute top-2.5 z-40 transition-[left] duration-200"
+        style={{ left: panelOpen ? 264 : 10 }}
       >
-        {panelOpen ? "≪ 面板" : "≫ 面板"}
-      </Button>
+        <IconToggle title={panelOpen ? "收合面板" : "展開面板"} onClick={() => setPanelOpen((v) => !v)}>
+          {panelOpen ? <PanelLeftClose className="size-4.5" /> : <PanelLeftOpen className="size-4.5" />}
+        </IconToggle>
+      </div>
 
-      {/* 右側切換按鈕群 */}
+      {/* 右上工具列 */}
       {engine && state && (
-        <>
-          <Button
-            variant="secondary"
-            className="absolute top-2.5 z-40 h-8 text-[12px] transition-[right] duration-200"
-            style={{ right: shiftRight }}
-            onClick={() => engine.setWaveOpen(!waveOpen)}
-          >
-            波形 顯示/隱藏
-          </Button>
-          <Button
-            variant="secondary"
-            className="absolute top-[44px] z-40 h-8 text-[12px] transition-[right] duration-200"
-            style={{ right: shiftRight }}
-            onClick={() => engine.setOrbitOpen(!orbitOpen)}
-          >
-            軌跡 NS-EW
-          </Button>
-          <Button
-            variant="secondary"
-            className="absolute top-[78px] z-40 h-[30px] w-[30px] rounded-full p-0 text-[15px] font-bold transition-[right] duration-200"
-            style={{ right: shiftRight }}
-            title="免責聲明・使用方式・常見問題"
-            onClick={() => setModalOpen(true)}
-          >
-            ？
-          </Button>
-        </>
+        <div
+          className="absolute top-2.5 z-40 flex flex-col gap-1.5 transition-[right] duration-200"
+          style={{ right: shiftRight }}
+        >
+          <IconToggle active={waveOpen} title="波形圖" onClick={() => engine.setWaveOpen(!waveOpen)}>
+            <Activity className="size-4.5" />
+          </IconToggle>
+          <IconToggle active={orbitOpen} title="位移軌跡 NS-EW" onClick={() => engine.setOrbitOpen(!orbitOpen)}>
+            <Orbit className="size-4.5" />
+          </IconToggle>
+          <IconToggle title="說明・免責聲明・常見問題" onClick={() => setModalOpen(true)}>
+            <Info className="size-4.5" />
+          </IconToggle>
+        </div>
       )}
 
       {/* HUD / 面板 */}
@@ -101,7 +118,7 @@ export default function App() {
 
       {/* 提示訊息 */}
       {toast && (
-        <div className="border-border absolute bottom-4 left-1/2 z-40 -translate-x-1/2 rounded-md border bg-secondary px-3.5 py-1.5 text-[12px]">
+        <div className="border-border animate-in fade-in slide-in-from-bottom-2 absolute bottom-4 left-1/2 z-40 -translate-x-1/2 rounded-full border bg-card/95 px-4 py-1.5 text-[12px] shadow-lg backdrop-blur">
           {toast}
         </div>
       )}

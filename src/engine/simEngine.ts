@@ -124,7 +124,7 @@ export class SimEngine {
   sceneKey = "home"
   ampScale = 1
   speed = 1
-  startSkip = 10
+  startSkip = 0
   swap = false
   waveView: "full" | "win" = "full"
   waveOpen = true
